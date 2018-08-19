@@ -23,9 +23,13 @@
 #include <unistd.h> /* close */
 #include <string.h> /* memset, memcpy */
 
+#include "pmab.h"
 #include "requests.h" /* resource_exists */
 #include "iprange.h"
 #include "discovery.h"
+#include "work_list.h"
+
+work_list_node_t work_ips;
 
 const char * const test_resources[85] = {
     "/phpmyAdmin/",
@@ -153,7 +157,7 @@ int discover_pma_installation(const char *host, int port) {
  * @param port
  * @return 
  */
-int discover_webserver(struct in_addr in, int port) {
+int port_check(struct in_addr in, int port) {
     int sockfd;
     int rval;
     struct sockaddr_in servaddr;
@@ -210,10 +214,30 @@ void discover_webservers(const char *range) {
 
     for (in_addr_t x = lo; x < hi; x++) {
         in.s_addr = htonl(x);
-        if (discover_webserver(in, 8000)) {
-            printf("%s 8000 is OPEN\n", inet_ntoa(in));
-        } else {
-            // printf("%s 80 is CLOSED\n", inet_ntoa(in));
-        }
+        work_list_append(&work_ips, inet_ntoa(in));
     }
+}
+
+void *discover_webserver(void *node_void_ptr) {
+    work_list_node_t *node_ptr = (work_list_node_t *) node_void_ptr;
+    work_list_node_t *node = work_list_search_pending(node_ptr->next);
+
+    do {
+        printf("Procesando=%s\n", node->data);
+        node->status = ACTIVE;
+
+        int ret;
+        int port = 8000;
+        struct in_addr in;
+
+        inet_aton(node->data, &in);
+        ret = port_check(in, port);
+        if (ret) {
+            printf("%s %d is OPEN\n", node->data, port);
+        } else {
+            printf("%s %d is CLOSED\n", node->data, port);
+        }
+    } while ((node = work_list_search_pending(node->next)));
+
+    return NULL;
 }

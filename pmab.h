@@ -25,7 +25,10 @@
 #ifndef PMAB_H
 #define PMAB_H
 
+#include "work_list.h"
+
 int main(int argc, char** argv);
+extern work_list_node_t work_ips;
 
 #endif /* PMAB_H */
 

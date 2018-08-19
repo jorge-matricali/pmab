@@ -27,6 +27,7 @@
 
 enum work_status {
     PENDING,
+    PICKED,
     ACTIVE,
     COMPLETED
 };
@@ -55,6 +56,42 @@ work_list_node_t* work_list_create(char* data, work_list_node_t* next);
  * @return 
  */
 work_list_node_t* work_list_append(work_list_node_t* head, char* data);
+
+/**
+ * Remove node from the front of list
+ * @param head
+ * @return 
+ */
+work_list_node_t* work_list_remove_front(work_list_node_t* head);
+
+/**
+ * Remove node from the back of the list
+ * @param head
+ * @return 
+ */
+work_list_node_t* work_list_remove_back(work_list_node_t* head);
+
+/**
+ * Remove a node from the list
+ * @param head
+ * @param nd
+ * @return 
+ */
+work_list_node_t* work_list_remove_any(work_list_node_t* head, work_list_node_t* nd);
+
+/**
+ * Return the number of elements in the list
+ * @param head
+ * @return 
+ */
+int work_list_count(work_list_node_t *head);
+
+/**
+ * Pick pending taks
+ * @param head
+ * @return 
+ */
+work_list_node_t* work_list_search_pending(work_list_node_t* head);
 
 #endif /* WORK_LIST_H */
 
