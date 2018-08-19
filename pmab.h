@@ -27,8 +27,11 @@
 
 #include "work_list.h"
 
+extern work_list_node_t g_work_ips;
+extern work_list_node_t g_work_webservers;
+extern int g_num_work_list_ips;
+
 int main(int argc, char** argv);
-extern work_list_node_t work_ips;
 
 #endif /* PMAB_H */
 

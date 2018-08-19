@@ -29,7 +29,9 @@
 #include "discovery.h"
 #include "work_list.h"
 
-work_list_node_t work_ips;
+work_list_node_t g_work_ips;
+work_list_node_t g_work_webservers;
+int g_num_work_list_ips;
 
 const char * const test_resources[85] = {
     "/phpmyAdmin/",
@@ -203,7 +205,7 @@ int port_check(struct in_addr in, int port) {
  * Discover open webservers in a given CIDR block
  * @param range
  */
-void discover_webservers(const char *range) {
+void discover_webservers_range(const char *range) {
     struct in_addr in;
     in_addr_t lo, hi;
     network_addr_t netaddr;
@@ -214,7 +216,7 @@ void discover_webservers(const char *range) {
 
     for (in_addr_t x = lo; x < hi; x++) {
         in.s_addr = htonl(x);
-        work_list_append(&work_ips, inet_ntoa(in));
+        work_list_append(&g_work_ips, inet_ntoa(in));
     }
 }
 
@@ -223,21 +225,48 @@ void *discover_webserver(void *node_void_ptr) {
     work_list_node_t *node = work_list_search_pending(node_ptr->next);
 
     do {
-        printf("Procesando=%s\n", node->data);
         node->status = ACTIVE;
 
         int ret;
-        int port = 8000;
+        int port = 80;
         struct in_addr in;
 
         inet_aton(node->data, &in);
         ret = port_check(in, port);
+
         if (ret) {
-            printf("%s %d is OPEN\n", node->data, port);
-        } else {
-            printf("%s %d is CLOSED\n", node->data, port);
+            /* Port open, appending to work list */
+            work_list_append(&g_work_webservers, node->data);
         }
+
+        node->status = COMPLETED;
     } while ((node = work_list_search_pending(node->next)));
+
+    printf("Exiting webserver discovery thread...\n");
+    g_num_work_list_ips--;
+    return NULL;
+}
+
+void *discover_pma_installations(void *node_void_ptr) {
+    work_list_node_t *node_ptr = (work_list_node_t *) node_void_ptr;
+    work_list_node_t *node = NULL; // = work_list_search_pending(node_ptr->next);
+
+    for (;;) {
+        node = work_list_search_pending(node_ptr->next);
+        if (node == NULL) {
+            if (g_num_work_list_ips < 1) {
+                /* No work is pending and the search threads are finished */
+                return NULL;
+            }
+            /* There are still threads looking for web servers. We'll keep waiting. */
+            sleep(1);
+        } else {
+            printf("Starting resources search (%s).\n", node->data);
+            node->status = ACTIVE;
+            discover_pma_installation(node->data, 80);
+            node->status = COMPLETED;
+        }
+    };
 
     return NULL;
 }

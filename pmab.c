@@ -40,10 +40,10 @@ int main(int argc, char **argv) {
         printf("No me pasaste un rango :(\n");
     } else {
         printf("Me pasaste un rango :D\n");
-        discover_webservers(argv[1]);
+        discover_webservers_range(argv[1]);
     }
 
-    int cantidad = work_list_count(&work_ips);
+    int cantidad = work_list_count(&g_work_ips);
     printf("Cantidad de trabajo en la cola: %d\n", cantidad);
 
     if (cantidad == 0) {
@@ -53,28 +53,44 @@ int main(int argc, char **argv) {
 
     int cant_th = 20;
     pthread_t thread_discover_webservers[cant_th];
-    // pthread_t thread_discover_pma_installations;
-
-    /* create a thread which performs webservers discovery */
+    pthread_t thread_discover_pma_installations[cant_th];
+    g_num_work_list_ips = 0;
+    
+    /* create threads that will perform webservers discovery */
     int t;
     for (t = 0; t < cant_th; t++) {
-        if (pthread_create(&thread_discover_webservers[t], NULL, &discover_webserver, (void *) &work_ips)) {
+        if (pthread_create(&thread_discover_webservers[t], NULL, &discover_webserver, (void *) &g_work_ips)) {
+            fprintf(stderr, "Error creating thread\n");
+            return 1;
+        }
+        g_num_work_list_ips++;
+    }
+
+    /* create threads that will perform PMA installations discovery */
+    int k;
+    for (k = 0; k < cant_th; k++) {
+        if (pthread_create(&thread_discover_pma_installations[k], NULL, &discover_pma_installations, (void *) &g_work_webservers)) {
             fprintf(stderr, "Error creating thread\n");
             return 1;
         }
     }
 
     for (int j = 0; j < t; j++) {
-        /* wait for the second thread to finish */
+        /* wait for servers discovery threads to finish */
         if (pthread_join(thread_discover_webservers[j], NULL)) {
             fprintf(stderr, "Error joining thread\n");
             return 2;
         }
     }
 
-    printf("Todos los thread su murieron... saliendo...\n");
-    exit(EXIT_SUCCESS);
+    for (int j = 0; j < k; j++) {
+        /* wait for PMA installations discovery threads to finish */
+        if (pthread_join(thread_discover_pma_installations[j], NULL)) {
+            fprintf(stderr, "Error joining thread\n");
+            return 2;
+        }
+    }
 
-    //    discover_webserver("localhost");
-    //    discover_pma_installation("localhost", 8000);
+    printf("Work finished. Exiting...\n");
+    exit(EXIT_SUCCESS);
 }

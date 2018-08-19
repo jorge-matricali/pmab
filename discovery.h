@@ -28,8 +28,9 @@
 #include <arpa/inet.h> /* in_addr_t */
 
 int discover_pma_installation(const char* host, int port);
-void discover_webservers(const char *range);
+void discover_webservers_range(const char *range);
 void *discover_webserver(void *node_void_ptr);
+void *discover_pma_installations(void *node_void_ptr);
 int port_check(struct in_addr in, int port);
 extern const char * const test_resources[85];
 
