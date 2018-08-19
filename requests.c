@@ -24,6 +24,8 @@
 #include <netdb.h> /* struct hostent, gethostbyname */
 #include <errno.h>
 
+#include "logger.h"
+
 /**
  * Verifica si existe el recurso HTTP
  * @param server
@@ -44,7 +46,7 @@ int resource_exists(struct hostent *server, int port, const char* path) {
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
-        perror("ERROR opening socket");
+        print_error("ERROR opening socket.");
         return errno;
     }
 
@@ -54,7 +56,7 @@ int resource_exists(struct hostent *server, int port, const char* path) {
     memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
 
     if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
-        perror("ERROR connecting");
+        print_error("ERROR connecting.");
         return -2;
     }
 
@@ -67,7 +69,7 @@ int resource_exists(struct hostent *server, int port, const char* path) {
     do {
         bytes = write(sockfd, message + sent, total - sent);
         if (bytes < 0) {
-            perror("ERROR writing message to socket");
+            print_error("ERROR writing message to socket.");
             return -3;
         }
         if (bytes == 0) {
@@ -83,7 +85,7 @@ int resource_exists(struct hostent *server, int port, const char* path) {
     do {
         bytes = read(sockfd, response + received, total - received);
         if (bytes < 0) {
-            perror("ERROR reading response from socket");
+            print_error("ERROR reading response from socket.");
             return -4;
         }
         if (bytes == 0) {
@@ -93,7 +95,7 @@ int resource_exists(struct hostent *server, int port, const char* path) {
     } while (received < total);
 
     if (received == total) {
-        perror("ERROR storing complete response from socket");
+        print_error("ERROR storing complete response from socket.");
         return -5;
     }
 

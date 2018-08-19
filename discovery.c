@@ -28,6 +28,7 @@
 #include "iprange.h"
 #include "discovery.h"
 #include "work_list.h"
+#include "logger.h"
 
 work_list_node_t g_work_ips;
 work_list_node_t g_work_webservers;
@@ -133,21 +134,21 @@ int discover_pma_installation(const char *host, int port) {
 
     server = gethostbyname(host);
     if (server == NULL) {
-        perror("ERROR, no such host");
+        print_error("ERROR, no such host");
         return EXIT_FAILURE;
     }
 
     for (int i = 0; i < 85; i++) {
         ret = resource_exists(server, port, test_resources[i]);
         if (ret > 0) {
-            printf("%s%s OK\n", host, test_resources[i]);
+            print_debug("%s%s OK", host, test_resources[i]);
             continue;
         }
         if (ret == 0) {
-            printf("%s%s NOT FOUND\n", host, test_resources[i]);
+            print_debug("%s%s NOT FOUND", host, test_resources[i]);
             continue;
         }
-        printf("%s%s FAIL\n", host, test_resources[i]);
+        print_debug("%s%s FAIL", host, test_resources[i]);
     }
 
     return 0;
@@ -169,7 +170,7 @@ int port_check(struct in_addr in, int port) {
     /* Create TCP socket */
     sockfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sockfd == -1) {
-        perror("ERROR opening socket");
+        print_error("ERROR opening socket");
         return errno;
     }
     fcntl(sockfd, F_SETFL, O_NONBLOCK);
@@ -242,14 +243,14 @@ void *discover_webserver(void *node_void_ptr) {
         node->status = COMPLETED;
     } while ((node = work_list_search_pending(node->next)));
 
-    printf("Exiting webserver discovery thread...\n");
+    print_debug("Exiting webserver discovery thread...");
     g_num_work_list_ips--;
     return NULL;
 }
 
 void *discover_pma_installations(void *node_void_ptr) {
     work_list_node_t *node_ptr = (work_list_node_t *) node_void_ptr;
-    work_list_node_t *node = NULL; // = work_list_search_pending(node_ptr->next);
+    work_list_node_t *node = NULL;
 
     for (;;) {
         node = work_list_search_pending(node_ptr->next);
@@ -261,7 +262,7 @@ void *discover_pma_installations(void *node_void_ptr) {
             /* There are still threads looking for web servers. We'll keep waiting. */
             sleep(1);
         } else {
-            printf("Starting resources search (%s).\n", node->data);
+            print_debug("Starting resources search (%s).", node->data);
             node->status = ACTIVE;
             discover_pma_installation(node->data, 80);
             node->status = COMPLETED;

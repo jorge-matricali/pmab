@@ -16,6 +16,7 @@
  */
 
 #include "work_list.h"
+#include "logger.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,11 +32,11 @@
 work_list_node_t* work_list_create(char* data, work_list_node_t* next) {
     work_list_node_t* new_node = (work_list_node_t*) malloc(sizeof (work_list_node_t));
     if (new_node == NULL) {
-        perror("Error creating a new node.\n");
+        print_error("Error creating a new node.");
         exit(0);
     }
     if (!(new_node->data = malloc(sizeof (char) * (strlen(data) + 1)))) {
-        perror("Unable to allocate memory.\n");
+        print_error("Unable to allocate memory.");
         exit(EXIT_FAILURE);
     }
     strncpy(new_node->data, data, strlen(data));

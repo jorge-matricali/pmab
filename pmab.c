@@ -19,6 +19,7 @@
 #include "iprange.h"
 #include "work_list.h"
 #include "pmab.h"
+#include "logger.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,24 +31,24 @@ int main(int argc, char **argv) {
     char *netmask_s;
 
     if (argc < 2) {
-        perror("usage: %s TARGET");
+        print_error("usage: %s TARGET");
         exit(EXIT_FAILURE);
     }
 
     netmask_s = strchr(argv[1], '/');
 
     if (netmask_s == NULL) {
-        printf("No me pasaste un rango :(\n");
+        print_error("No me pasaste un rango :(");
     } else {
-        printf("Me pasaste un rango :D\n");
+        print_debug("Me pasaste un rango :D");
         discover_webservers_range(argv[1]);
     }
 
     int cantidad = work_list_count(&g_work_ips);
-    printf("Cantidad de trabajo en la cola: %d\n", cantidad);
+    print_debug("Cantidad de trabajo en la cola: %d", cantidad);
 
     if (cantidad == 0) {
-        printf("Sin trabajo... saliendo...\n");
+        print_debug("Sin trabajo... saliendo...");
         exit(EXIT_SUCCESS);
     }
 
@@ -55,12 +56,12 @@ int main(int argc, char **argv) {
     pthread_t thread_discover_webservers[cant_th];
     pthread_t thread_discover_pma_installations[cant_th];
     g_num_work_list_ips = 0;
-    
+
     /* create threads that will perform webservers discovery */
     int t;
     for (t = 0; t < cant_th; t++) {
         if (pthread_create(&thread_discover_webservers[t], NULL, &discover_webserver, (void *) &g_work_ips)) {
-            fprintf(stderr, "Error creating thread\n");
+            print_error("Error creating thread.");
             return 1;
         }
         g_num_work_list_ips++;
@@ -70,7 +71,7 @@ int main(int argc, char **argv) {
     int k;
     for (k = 0; k < cant_th; k++) {
         if (pthread_create(&thread_discover_pma_installations[k], NULL, &discover_pma_installations, (void *) &g_work_webservers)) {
-            fprintf(stderr, "Error creating thread\n");
+            print_error("Error creating thread.");
             return 1;
         }
     }
@@ -78,7 +79,7 @@ int main(int argc, char **argv) {
     for (int j = 0; j < t; j++) {
         /* wait for servers discovery threads to finish */
         if (pthread_join(thread_discover_webservers[j], NULL)) {
-            fprintf(stderr, "Error joining thread\n");
+            print_error("Error joining thread.");
             return 2;
         }
     }
@@ -86,11 +87,11 @@ int main(int argc, char **argv) {
     for (int j = 0; j < k; j++) {
         /* wait for PMA installations discovery threads to finish */
         if (pthread_join(thread_discover_pma_installations[j], NULL)) {
-            fprintf(stderr, "Error joining thread\n");
+            print_error("Error joining thread.");
             return 2;
         }
     }
 
-    printf("Work finished. Exiting...\n");
+    print_debug("Work finished. Exiting...");
     exit(EXIT_SUCCESS);
 }

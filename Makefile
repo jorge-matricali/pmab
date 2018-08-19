@@ -4,7 +4,7 @@ CFLAGS	+= -Wall -g -std=gnu99 -O3
 LDFLAGS	+=
 
 NAME	= pmab
-SRCS	= pmab.c discovery.c requests.c iprange.c work_list.c
+SRCS	= pmab.c discovery.c requests.c iprange.c work_list.c logger.c
 OBJS	= $(SRCS:.c=.o)
 
 all: $(NAME)
