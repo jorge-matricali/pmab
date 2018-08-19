@@ -18,8 +18,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <netdb.h> /* struct hostent, gethostbyname */
+#include <errno.h> /* errno */
+#include <fcntl.h>
+#include <unistd.h> /* close */
+#include <string.h> /* memset, memcpy */
 
 #include "requests.h" /* resource_exists */
+#include "iprange.h"
+#include "discovery.h"
 
 const char * const test_resources[85] = {
     "/phpmyAdmin/",
@@ -137,6 +143,77 @@ int discover_pma_installation(const char *host, int port) {
         }
         printf("%s%s FAIL\n", host, test_resources[i]);
     }
-    
+
     return 0;
+}
+
+/**
+ * Scans for an open port
+ * @param in
+ * @param port
+ * @return 
+ */
+int discover_webserver(struct in_addr in, int port) {
+    int sockfd;
+    int rval;
+    struct sockaddr_in servaddr;
+    fd_set fdset;
+    struct timeval tv;
+
+    /* Create TCP socket */
+    sockfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (sockfd == -1) {
+        perror("ERROR opening socket");
+        return errno;
+    }
+    fcntl(sockfd, F_SETFL, O_NONBLOCK);
+
+    memset(&servaddr, 0, sizeof (servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(port);
+    servaddr.sin_addr = in;
+
+    rval = connect(sockfd, (struct sockaddr *) &servaddr, sizeof (servaddr));
+    FD_ZERO(&fdset);
+    FD_SET(sockfd, &fdset);
+    tv.tv_sec = 1; /* 1 second timeout */
+    tv.tv_usec = 0;
+
+    if (select(sockfd + 1, NULL, &fdset, NULL, &tv) == 1) {
+        int so_error;
+        socklen_t len = sizeof so_error;
+
+        getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &so_error, &len);
+
+        if (so_error == 0) {
+            close(sockfd);
+            return 1;
+        }
+    }
+
+    close(sockfd);
+    return 0;
+}
+
+/**
+ * Discover open webservers in a given CIDR block
+ * @param range
+ */
+void discover_webservers(const char *range) {
+    struct in_addr in;
+    in_addr_t lo, hi;
+    network_addr_t netaddr;
+
+    netaddr = str_to_netaddr(range);
+    lo = netaddr.addr;
+    hi = broadcast(netaddr.addr, netaddr.pfx);
+
+    for (in_addr_t x = lo; x < hi; x++) {
+        in.s_addr = htonl(x);
+        if (discover_webserver(in, 8000)) {
+            printf("%s 8000 is OPEN\n", inet_ntoa(in));
+        } else {
+            // printf("%s 80 is CLOSED\n", inet_ntoa(in));
+        }
+    }
 }

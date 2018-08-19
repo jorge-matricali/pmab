@@ -16,10 +16,29 @@
  */
 
 #include "discovery.h"
+#include "iprange.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main(int argc, char **argv) {
-    discover_pma_installation("localhost", 8000);
+    char *netmask_s;
+
+    if (argc < 2) {
+        perror("usage: %s TARGET");
+        exit(EXIT_FAILURE);
+    }
+
+    netmask_s = strchr(argv[1], '/');
+
+    if (netmask_s == NULL) {
+        printf("No me pasaste un rango :(\n");
+    } else {
+        printf("Me pasaste un rango :D\n");
+        discover_webservers(argv[1]);
+    }
+
+    //    discover_webserver("localhost");
+    //    discover_pma_installation("localhost", 8000);
 }

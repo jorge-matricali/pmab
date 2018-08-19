@@ -22,7 +22,7 @@
 #include <sys/socket.h> /* socket, connect */
 #include <netinet/in.h> /* struct sockaddr_in, struct sockaddr */
 #include <netdb.h> /* struct hostent, gethostbyname */
-#include <err.h>
+#include <errno.h>
 
 /**
  * Verifica si existe el recurso HTTP
@@ -45,7 +45,7 @@ int resource_exists(struct hostent *server, int port, const char* path) {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         perror("ERROR opening socket");
-        return -1;
+        return errno;
     }
 
     memset(&serv_addr, 0, sizeof (serv_addr));

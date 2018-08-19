@@ -25,7 +25,11 @@
 #ifndef DISCOVERY_H
 #define DISCOVERY_H
 
+#include <arpa/inet.h> /* in_addr_t */
+
 int discover_pma_installation(const char* host, int port);
+int discover_webserver(struct in_addr in, int port);
+void discover_webservers(const char *range);
 extern const char * const test_resources[85];
 
 #endif /* DISCOVERY_H */
